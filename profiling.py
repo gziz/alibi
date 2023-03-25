@@ -13,7 +13,7 @@ model_size = 100 # arbitrary
 
 alibi_gen = ALiBiAttentionMaskGenerator(num_heads=8)
 x = torch.empty((seq_len,model_size))
-print(x.shape)
 
 for _ in range(args.loops):
+    alibi_gen = ALiBiAttentionMaskGenerator(num_heads=8)
     alibi_gen(x)
