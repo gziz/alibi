@@ -91,15 +91,15 @@ class ALiBiAttentionMaskGenerator:
     .. note::
         This class follows the :class:`AttentionMaskGenerator` protocol.
     """
+
     _cached_attn_mask: Optional[Tensor]
 
-    def __init__(self, num_heads) -> None:
+    def __init__(self, num_heads: int) -> None:
         self._cached_attn_mask = None
         self.num_heads = num_heads
 
     def get_slopes(self, num_heads: int) -> Tensor:
-
-        def get_slopes_power_of_2(num_heads, step=1):
+        def get_slopes_power_of_2(num_heads: int, step: int = 1) -> Tensor:
             start = 2 ** (-8 / num_heads)
             return torch.pow(start, torch.arange(1, 1 + num_heads, step))
 
@@ -108,9 +108,10 @@ class ALiBiAttentionMaskGenerator:
         else:
             closest_pow_2 = 2 ** math.floor(math.log2(num_heads))
             base_slopes = get_slopes_power_of_2(closest_pow_2)
-            extra_slopes = get_slopes_power_of_2(2 * closest_pow_2, step=2)[num_heads - closest_pow_2]
+            extra_slopes = get_slopes_power_of_2(2 * closest_pow_2, step=2)
+            num_slopes_left = num_heads - closest_pow_2
 
-            return torch.cat(base_slopes, extra_slopes)
+            return torch.cat([base_slopes, extra_slopes[: num_slopes_left]])
 
     def __call__(self, x: Tensor) -> Tensor:
         """
@@ -122,14 +123,13 @@ class ALiBiAttentionMaskGenerator:
             An ALiBi mask. *Shape:* :math:`(H, S, S)`, where
             :math:`S` is the sequence length and :math:`H`is
             the number of heads.
- 
+
         """
 
         mask = self._cached_attn_mask
         seq_len = x.size(-2)
 
         if mask is None or mask.device != x.device or mask.size(-2) < seq_len:
-
             slopes = self.get_slopes(self.num_heads)
 
             arange_tensor = torch.arange(seq_len)[None, None, :]
