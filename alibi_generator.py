@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import NoReturn, Optional, Protocol, final
+from typing import Optional, Protocol, final
 import math
 import torch
 from torch import Tensor
@@ -98,18 +98,19 @@ class ALiBiAttentionMaskGenerator:
         self.num_heads = num_heads
 
     def get_slopes(self, num_heads: int) -> Tensor:
+
         def get_slopes_power_of_2(num_heads, step=1):
             start = 2 ** (-8 / num_heads)
             return torch.pow(start, torch.arange(1, 1 + num_heads, step))
-        
+
         if math.log2(num_heads).is_integer():
             return get_slopes_power_of_2(num_heads)
         else:
-            closest_power_of_2 = 2 ** math.floor(math.log2(num_heads))
-            return torch.cat(
-                [get_slopes_power_of_2(closest_power_of_2),
-                get_slopes_power_of_2(2 * closest_power_of_2, step=2)[ :num_heads - closest_power_of_2]]
-                )
+            closest_pow_2 = 2 ** math.floor(math.log2(num_heads))
+            base_slopes = get_slopes_power_of_2(closest_pow_2)
+            extra_slopes = get_slopes_power_of_2(2 * closest_pow_2, step=2)[num_heads - closest_pow_2]
+
+            return torch.cat(base_slopes, extra_slopes)
 
     def __call__(self, x: Tensor) -> Tensor:
         """
@@ -119,8 +120,9 @@ class ALiBiAttentionMaskGenerator:
             :math:`S` is the sequence length, and :math:`M` is the model size.
         :returns:
             An ALiBi mask. *Shape:* :math:`(H, S, S)`, where
-            :math:`S` is the sequence length and :math:`H`is the number of heads.
-            
+            :math:`S` is the sequence length and :math:`H`is
+            the number of heads.
+ 
         """
 
         mask = self._cached_attn_mask
