@@ -99,6 +99,8 @@ class ALiBiAttentionMaskGenerator:
         self.num_heads = num_heads
 
     def get_slopes(self, num_heads: int) -> Tensor:
+        """Compute the slopes"""
+
         def get_slopes_power_of_2(num_heads: int, step: int = 1) -> Tensor:
             start = 2 ** (-8 / num_heads)
             return torch.pow(start, torch.arange(1, 1 + num_heads, step))
@@ -108,10 +110,10 @@ class ALiBiAttentionMaskGenerator:
         else:
             closest_pow_2 = 2 ** math.floor(math.log2(num_heads))
             base_slopes = get_slopes_power_of_2(closest_pow_2)
-            extra_slopes = get_slopes_power_of_2(2 * closest_pow_2, step=2)
             num_slopes_left = num_heads - closest_pow_2
+            extra_slopes = get_slopes_power_of_2(2 * closest_pow_2, step=2)
 
-            return torch.cat([base_slopes, extra_slopes[: num_slopes_left]])
+            return torch.cat([base_slopes, extra_slopes[:num_slopes_left]])
 
     def __call__(self, x: Tensor) -> Tensor:
         """
@@ -121,9 +123,7 @@ class ALiBiAttentionMaskGenerator:
             :math:`S` is the sequence length, and :math:`M` is the model size.
         :returns:
             An ALiBi mask. *Shape:* :math:`(H, S, S)`, where
-            :math:`S` is the sequence length and :math:`H`is
-            the number of heads.
-
+            :math:`S` is the sequence length and :math:`H`is the number of heads.
         """
 
         mask = self._cached_attn_mask
@@ -135,10 +135,8 @@ class ALiBiAttentionMaskGenerator:
             arange_tensor = torch.arange(seq_len)[None, None, :]
             arange_tensor = arange_tensor.expand((self.num_heads, -1, -1))
 
-            causal_gen = CausalAttentionMaskGenerator()
-
             alibi_biases = arange_tensor * slopes[:, None, None]
-            mask = alibi_biases + causal_gen(x)
+            mask = alibi_biases + CausalAttentionMaskGenerator()(x)
 
             self._cached_attn_mask = mask
 
