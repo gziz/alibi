@@ -1,7 +1,7 @@
 import torch
 import argparse
 
-from alibi_generator import ALiBiAttentionMaskGenerator
+from alibi import ALiBiAttentionMaskGenerator
 
 
 parser = argparse.ArgumentParser(add_help=False)
