@@ -1,9 +1,3 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
-#
-# This source code is licensed under the BSD-style license found in the
-# LICENSE file in the root directory of this source tree.
-
 import math
 from typing import Optional, Protocol, final
 
@@ -95,12 +89,12 @@ class ALiBiAttentionMaskGenerator:
     """
 
     _cached_attn_mask: Optional[Tensor]
-    causal_attn_mask_gen: CausalAttentionMaskGenerator
+    _causal_attn_mask_gen: CausalAttentionMaskGenerator
 
     def __init__(self, num_heads: int) -> None:
         self._cached_attn_mask = None
         self.num_heads = num_heads
-        self.causal_attn_mask_gen = CausalAttentionMaskGenerator()
+        self._causal_attn_mask_gen = CausalAttentionMaskGenerator()
 
     def get_slopes(self, num_heads: int) -> Tensor:
         def get_slopes_power_of_2(num_heads: int, step: int = 1) -> Tensor:
@@ -143,7 +137,7 @@ class ALiBiAttentionMaskGenerator:
             arange_tensor = arange_tensor.expand((self.num_heads, -1, -1))
 
             alibi_biases = arange_tensor * slopes[:, None, None]
-            mask = alibi_biases + self.causal_attn_mask_gen(x)
+            mask = alibi_biases + self._causal_attn_mask_gen(x)
 
             self._cached_attn_mask = mask
 
